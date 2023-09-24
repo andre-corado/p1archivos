@@ -21,11 +21,18 @@ def split_Command(inputTxt):  # ANALIZADOR LÉXICO EN TEORÍA
             for j in range(i + 1, len(words)):
                 words[i] = words[i] + " " + words[j]
                 if words[j].endswith("\""):
+                    # Si contiene /user/
+                    if words[i].find("/user/") != -1:
+                        # Averiguar usuario actual por terminal con whoami
+                        user = os.popen("whoami").read()
+                        # Sustituir /user/ por /home/user/
+                        words[i] = words[i].replace("/user/", "/" + user[:-1] + "/")
                     # Se concatena la palabra con las comillas
                     words2.append(words[i])
                     break
                 # Si no se encontró la palabra con las comillas se retorna error
-                return "Error: No se encontró el cierre de comillas"
+                if j == len(words) - 1:
+                    return "Error: No se encontró el cierre de comillas"
 
         else:  # SE REALIZA LOWERCASE A LAS PALABRAS, EXCEPTO LO QUE ESTE DESPUES DE UN =
             if "=" not in words[i]:
@@ -48,7 +55,7 @@ def split_Command(inputTxt):  # ANALIZADOR LÉXICO EN TEORÍA
 
 
 def analizar_Comando(consoleLine):
-    print(consoleLine)  # PARA VER COMO LLEGAN LAS PALABRAS
+    #print(consoleLine)  # PARA VER COMO LLEGAN LAS PALABRAS
     # ------------- COMANDO EXECUTE -------------
     if consoleLine[0] == "execute":
         # Si contiene -path= y tiene un path válido
@@ -70,7 +77,7 @@ def analizar_Comando(consoleLine):
                     print('\n############################\n' + line + '\n############################\n')
                     continue
                 print(split_Command(line))
-        return "Comando execute ejecutado."
+        return "\n########################################################\nScript ejecutado exitosamente."
 
     # ===========================================================
     # ================ ADMINISTRACIÓN DE DISCOS =================

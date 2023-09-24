@@ -2,11 +2,11 @@ import os.path
 from graphviz import Digraph
 
 from cmds.structs.MBR import MBR
-from cmds.mount import getMountedPartition
+from cmds.mount import getMountedPartition, isMounted
 from cmds.rep.bitmaps import makebm_block, makebm_inode
 
 def execute(consoleLine):
-    name, path, id, ruta = '', '', '', ''
+    name, path, id, ruta, p = '', '', '', '', None
     nameFound, pathFound, idFound, rutaFound = False, False, False, False
     for i in range(len(consoleLine)):
         if consoleLine[i].startswith('-path='):
@@ -23,17 +23,18 @@ def execute(consoleLine):
             id = consoleLine[i][4:]
             if len(id) < 4:
                 return 'Error: Id no válido, muy breve.'
-            p = getMountedPartition(id)
-            if p == None:
+            if not isMounted(id):
                 return 'Error: No existe una partición montada con ese id.'
-            idFound = True
+            else:
+                p = getMountedPartition(id)
+                idFound = True
         if consoleLine[i].startswith('-ruta='):
             ruta = consoleLine[i][6:]
             if len(ruta) < 1:
                 return 'Error: Ruta no puede ser vacío.'
             rutaFound = True
 
-    if p == None:
+    if not isMounted(id):
         return 'Error: No existe una partición montada con ese id.'
 
     if name == 'MBR':
@@ -142,18 +143,17 @@ def makeDiskTable(tablePath, diskPath):
                     ebrs = mbr.getLogicPartitions(diskPath)
                     subbloques = []
                     for ebr in ebrs:
-                        if ebr.part_status != 'N':
-                            if left == ebr.part_start:
-                                subbloques.append(
-                                    Bloque(str(round((ebr.part_s / (finishDisk - 136)) * 100)) + '%', 'Lógica'))
-                                left = ebr.part_start + ebr.part_s
-                            else:
-                                subbloques.append(
-                                    Bloque(str(round(((ebr.part_start - left) / (finishDisk - 136)) * 100)) + '%',
-                                           'Libre'))
-                                subbloques.append(
-                                    Bloque(str(round((ebr.part_s / (finishDisk - 136)) * 100)) + '%', 'Lógica'))
-                                left = ebr.part_start + ebr.part_s
+                        if left == ebr.part_start:
+                            subbloques.append(
+                                Bloque(str(round((ebr.part_s / (finishDisk - 136)) * 100)) + '%', 'Lógica'))
+                            left = ebr.part_start + ebr.part_s
+                        else:
+                            subbloques.append(
+                                Bloque(str(round(((ebr.part_start - left) / (finishDisk - 136)) * 100)) + '%',
+                                       'Libre'))
+                            subbloques.append(
+                                Bloque(str(round((ebr.part_s / (finishDisk - 136)) * 100)) + '%', 'Lógica'))
+                            left = ebr.part_start + ebr.part_s
                     if len(subbloques) == 0:
                         # Añadir bloque con toda la extendida vacío
                         subbloques.append(Bloque(str(round((partition.part_s / (finishDisk - 136)) * 100)) + '%', 'Libre'))
@@ -161,7 +161,8 @@ def makeDiskTable(tablePath, diskPath):
                     # Si hay espacio libre al final de la extendida
                     if left != (partition.part_start + partition.part_s):
                         subbloques.append(
-                            Bloque(str(round(((extendida.size - left) / (finishDisk - 136)) * 100)) + '%', 'Libre'))
+                            Bloque(str(round(((partition.part_start + partition.part_s - left) / (finishDisk - 136)) * 100)) + '%', 'Libre'))
+                        left = partition.part_start + partition.part_s
                     extendida.ebr = subbloques
                     bloques.append(extendida)
 

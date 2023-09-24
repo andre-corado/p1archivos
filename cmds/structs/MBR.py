@@ -77,13 +77,17 @@ class MBR:  # Size = 136 bytes
             file.close()
         self.setFecha()
         self.updateDisk(path)
-        print("Disco creado exitosamente.")
 
     def updateDisk(self, path):
         with open(path, "r+b") as file:
             file.write(self.encode())
             file.close()
-        print("MBR actualizado en el disco.")
+
+    def updatePrimaryPartition(self, partitions):
+        self.mbr_partition_1 = partitions[0]
+        self.mbr_partition_2 = partitions[1]
+        self.mbr_partition_3 = partitions[2]
+        self.mbr_partition_4 = partitions[3]
 
     def getPartitions(self):
         return [self.mbr_partition_1, self.mbr_partition_2, self.mbr_partition_3, self.mbr_partition_4]
@@ -93,7 +97,7 @@ class MBR:  # Size = 136 bytes
         for partition in partitions:
             if partition.part_name == name:
                 if partition.part_type == 'E':
-                    return None, 'E'
+                    return partition, 'E'
                 return partition, 'P'
         if self.hasExtendedPartition():
             partitions = self.getLogicPartitions(path)
@@ -130,6 +134,13 @@ class MBR:  # Size = 136 bytes
             return 137
         else:
             return self.getPartitions()[indexPartition - 1].part_start + self.getPartitions()[indexPartition - 1].part_s
+
+    def getIndexOfEBR(self, path, name):
+        ebrs = self.getLogicPartitions(path)
+        for i in range(len(ebrs)):
+            if ebrs[i].part_name == name:
+                return i
+        return None
 
     def partitionSizeIsCorrect(self, partIndex,
                                size):  # Validates if the size is correct for a new partition and if there is enough space between partitions
@@ -228,10 +239,12 @@ class MBR:  # Size = 136 bytes
                         return 'Error: No hay espacio suficiente para crear la partición.'
                 left = ebrs[i].part_start + ebrs[i].part_s
             if ebrs[i].part_next != -1:
+                left = ebrs[i].part_next
                 continue
             else:
                 if size < (right - (left + 30)):
                     #Crear EBR
+                    left = ebrs[i].part_start + ebrs[i].part_s
                     ebr = EBR(status='N', fit=fit, start=left, size=size, next=-1, name=name)
                     ebrs[i].part_next = ebr.part_start
                     ebrs.append(ebr)
@@ -244,13 +257,64 @@ class MBR:  # Size = 136 bytes
         with open(path, 'r+b') as file:
             for i in range(len(ebrs)):
                 file.seek(ebrs[i].part_start)
-                print('Posición: ' + str(ebrs[i].part_start))
                 file.write(ebrs[i].encode())
             file.close()
 
+    # DELETE PARTITION
+    def deletePartition(self, path, name):
+        indexDisk, bytesToErase = 0, 0
+        # Buscar partición
+        partition, type = self.getPartitionNamed(name, path)
+        if type is None:
+            return 'Error: No existe una partición con ese nombre.'
+        elif type == 'P' or type == 'E':
+            # Modificar MBR
+            indexDisk = partition.part_start
+            bytesToErase = partition.part_s
+            newP = Partition()
+            parts = self.getPartitions()
+            parts[parts.index(partition)] = newP
+            self.updatePrimaryPartition(parts)
+            self.updateDisk(path)
 
+            # Borrar del disco
+            try:
+                with open(path, 'r+b') as file:
+                    file.seek(indexDisk)
+                    file.write(bytesToErase * b'\x00')
+                    file.close()
+            except:
+                return 'Error: No se pudo borrar la partición.'
+        elif type == 'L':
+            # Modificar EBR
+            ebrs = self.getLogicPartitions(path)
+            index = self.getIndexOfEBR(path, name)
+            if index == 0:
+                temp_next = ebrs[index].part_next
+                ebrs[index] = EBR()
+                ebrs[index].part_next = temp_next
+                ebrs.pop(index)
+                self.updateEBRS(path, ebrs)
+            else:
+                ebrs[index - 1].part_next = ebrs[index].part_next
+                with open(path, 'r+b') as file:
+                    file.seek(ebrs[index].part_start)
+                    file.write(b'\x00' * ebrs[index].part_s)
+                    file.close()
+                ebrs.pop(index)
+                self.updateEBRS(path, ebrs)
+        return 'Partición eliminada exitosamente.'
 
-
+    def deleteEBR(self, path, start):
+        try:
+            with open(path, 'r+b') as file:
+                file.seek(start)
+                ebr = EBR()
+                ebr.decode(file.read(30))
+                file.write(b'\x00' * ebr.part_s)
+                file.close()
+        except:
+            return 'Error: No se pudo borrar la partición.'
     # ======================= Graphviz =========================
     def getGraph(self, extension='png', path=''):
         # Encabezado MBR

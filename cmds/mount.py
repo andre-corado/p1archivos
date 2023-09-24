@@ -32,11 +32,8 @@ def execute(consoleLine):
 
     # Obtener partición
     partition, type = mbr.getPartitionNamed(name, path)
-    if type == 'E':
-        return 'Error: No se puede montar la partición extendida.'
     if partition == None:
         return 'Error: No se pudo obtener la partición.'
-
 
     # Obtener id de partición
     idPartition = "54"

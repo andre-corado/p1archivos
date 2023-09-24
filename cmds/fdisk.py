@@ -77,7 +77,7 @@ def execute(consoleLine):
             pass
         elif deleteFound:
             # Se elimina una partición
-            pass
+            return deletePartition(path, name)
     except:
         return 'Error: En ingreso de parámetros.'
     
@@ -129,5 +129,34 @@ def newPartition(size, path, name, type, fit):
 
     except Exception as e   :
         return 'Error: Disco no encontrado.'
-    
-    
+
+def deletePartition(path, name):
+    try:
+        if not os.path.exists(path):
+            return 'Error: Disco no encontrado.'
+        with open(path, 'r+b') as file:
+            mbr = MBR()
+            mbr.decode(file.read(136))
+            file.close()
+    except:
+        return 'Error: Disco no encontrado.'
+
+    # Buscar partición
+    part, type = mbr.getPartitionNamed(name, path)
+    if type is None:
+        return 'Error: No existe una partición con ese nombre.'
+
+    # Eliminar partición
+    mbr.deletePartition(path, name)
+    return 'Partición eliminada exitosamente.'
+
+def convertNameToID(name, path):
+    id = "54"
+    # Obtener int dentro de name
+    for i in range(len(name)):
+        if name[i].isdigit():
+            id += name[i]
+        else:
+            continue
+    id += path.split('/')[-1][:-4] # Obtener nombre del disco
+    return id
