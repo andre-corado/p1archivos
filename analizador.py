@@ -1,6 +1,7 @@
 from cmds import mkdisk, fdisk, rmdisk, mount, mkfs  # Importar módulo de comandos
 from cmds.rep import rep
 import os
+
 # Diccionario de particiones montadas   id -> MountedPartition
 mountedPartitions = {}
 
@@ -16,7 +17,7 @@ def split_Command(inputTxt):  # ANALIZADOR LÉXICO EN TEORÍA
         if words[i].endswith("\""):
             continue
         if words[i].startswith("-path=\"") or words[i].startswith("-id=\""):
-         # Se busca la palabra con las siguientes comillas
+            # Se busca la palabra con las siguientes comillas
             for j in range(i + 1, len(words)):
                 words[i] = words[i] + " " + words[j]
                 if words[j].endswith("\""):
@@ -47,7 +48,7 @@ def split_Command(inputTxt):  # ANALIZADOR LÉXICO EN TEORÍA
 
 
 def analizar_Comando(consoleLine):
-    print(consoleLine) # PARA VER COMO LLEGAN LAS PALABRAS
+    print(consoleLine)  # PARA VER COMO LLEGAN LAS PALABRAS
     # ------------- COMANDO EXECUTE -------------
     if consoleLine[0] == "execute":
         # Si contiene -path= y tiene un path válido
@@ -66,7 +67,7 @@ def analizar_Comando(consoleLine):
             # Analizar cada línea
             for line in lines:
                 if line.startswith("#"):
-                    print('\n############################\n'+line+'\n############################\n')
+                    print('\n############################\n' + line + '\n############################\n')
                     continue
                 print(split_Command(line))
         return "Comando execute ejecutado."
@@ -246,8 +247,8 @@ def analizar_Comando(consoleLine):
         # return c.chmod.execute(consoleLine)
     # ------------- COMANDO PAUSE -------------
     elif consoleLine[0] == "pause":
-        # return c.pause.execute(consoleLine)
-        return
+        print(bannerPausa)
+        return input("Presione cualquier tecla para continuar...")
 
     # ===========================================================
     # ==================== REPORTE DE DATOS =====================
@@ -295,3 +296,14 @@ class mountedPartition:
         self.path = path
         self.name = name
         self.type = type
+
+
+bannerPausa = """
+######     #    #     #  #####  ####### 
+#     #   # #   #     # #     # #       
+#     #  #   #  #     # #       #       
+######  #     # #     #  #####  #####   
+#       ####### #     #       # #       
+#       #     # #     # #     # #       
+#       #     #  #####   #####  #######\n\n
+"""
