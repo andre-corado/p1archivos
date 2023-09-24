@@ -4,6 +4,8 @@ from graphviz import Digraph
 from cmds.structs.MBR import MBR
 from cmds.mount import getMountedPartition, isMounted
 from cmds.rep.bitmaps import makebm_block, makebm_inode
+from cmds.structs.MBR import getSuperblockByMountedPartition
+
 
 def execute(consoleLine):
     name, path, id, ruta, p = '', '', '', '', None
@@ -57,6 +59,10 @@ def execute(consoleLine):
         if not path.endswith('.txt'):
             return 'Error: El archivo debe ser .txt'
         return makebm_block(path, p)
+    elif name == 'SB':
+        if not pathFound or not idFound:
+            return 'Error: Faltan parámetros obligatorios.'
+        return makeSBTable(path, p)
 
 
 
@@ -66,7 +72,7 @@ def makeMBRTable(tablePath, diskPath):
     mbr = getMBRFromDisk(diskPath)
     if isinstance(mbr, str):
         return mbr
-    if ".jpg" in tablePath or ".png" in tablePath or ".pdf" in tablePath:
+    if not tablePath.endswith(".pdf") and not tablePath.endswith(".png") and not tablePath.endswith(".jpg"):
         if not tablePath.endswith("\""):
             ext = tablePath[-3:]
             tablePath = tablePath[:-4]
@@ -221,6 +227,46 @@ def makeDiskTable(tablePath, diskPath):
     os.remove(tablePath)
     return 'Tabla DISK creada exitosamente.'
 
+def makeSBTable(path, p):
+    sb = getSuperblockByMountedPartition(p)
+    if isinstance(sb, str):
+        return sb
+    if not path.endswith('.pdf') and not path.endswith('.png') and not path.endswith('.jpg'):
+        return 'Error: Formato de reporte no válido.'
+    # Crear dot
+    dot = Digraph(format=path[-3:], name='Reporte de Superbloque')
+    # Caja que contiene el superbloque
+    with dot.subgraph(name='cluster_Superbloque') as sbbox:
+        sbbox.attr(label='Superbloque', fontsize='20', fillcolor='lightyellow', style='filled')
+        txt = 's_filesystem_type: ' + str(sb.s_filesystem_type) + '\n'
+        txt += 's_inodes_count: ' + str(sb.s_inodes_count) + '\n'
+        txt += 's_blocks_count: ' + str(sb.s_blocks_count) + '\n'
+        txt += 's_free_blocks_count: ' + str(sb.s_free_blocks_count) + '\n'
+        txt += 's_free_inodes_count: ' + str(sb.s_free_inodes_count) + '\n'
+        txt += 's_mtime: ' + sb.s_mtime + '\n'
+        txt += 's_umtime: ' + sb.s_umtime + '\n'
+        txt += 's_mnt_count: ' + str(sb.s_mnt_count) + '\n'
+        txt += 's_magic: ' + str(sb.s_magic) + '\n'
+        txt += 's_inode_size: ' + str(sb.s_inode_s) + '\n'
+        txt += 's_block_size: ' + str(sb.s_block_s) + '\n'
+        txt += 's_first_ino: ' + str(sb.s_first_ino) + '\n'
+        txt += 's_first_blo: ' + str(sb.s_first_blo) + '\n'
+        txt += 's_bm_inode_start: ' + str(sb.s_bm_inode_start) + '\n'
+        txt += 's_bm_block_start: ' + str(sb.s_bm_block_start) + '\n'
+        txt += 's_inode_start: ' + str(sb.s_inode_start) + '\n'
+        txt += 's_block_start: ' + str(sb.s_block_start) + '\n'
+        sbbox.node('sb', label=txt, shape='box', fontsize='15', fillcolor='lightyellow', style='filled', color='transparent')
+
+    # ---- CREAR REPORTE ----
+    # Verificar si existe directorio y crearlo si no existe
+    dir = getDirFromPath(path)
+    if os.path.exists(dir) == False:
+        os.makedirs(dir)
+    # Renderizar dot en table path
+    dot.render(path, view=True)
+    # Borrar archivos temporales
+    os.remove(path)
+    return 'Tabla SB creada exitosamente.'
 
 def getMBRFromDisk(diskPath):
     if not os.path.exists(diskPath):

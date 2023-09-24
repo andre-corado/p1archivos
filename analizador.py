@@ -14,9 +14,9 @@ def split_Command(inputTxt):  # ANALIZADOR LÉXICO EN TEORÍA
     for i in range(len(words)):  # Se analiza cada palabra
 
         # ------------- COMILLAS DOBLES -------------
-        if words[i].endswith("\""):
-            continue
         if words[i].startswith("-path=\"") or words[i].startswith("-id=\""):
+            if words[i].endswith("\""):
+                words2.append(words[i])
             # Se busca la palabra con las siguientes comillas
             for j in range(i + 1, len(words)):
                 words[i] = words[i] + " " + words[j]
@@ -33,7 +33,8 @@ def split_Command(inputTxt):  # ANALIZADOR LÉXICO EN TEORÍA
                 # Si no se encontró la palabra con las comillas se retorna error
                 if j == len(words) - 1:
                     return "Error: No se encontró el cierre de comillas"
-
+        elif words[i].endswith("\""):
+            continue
         else:  # SE REALIZA LOWERCASE A LAS PALABRAS, EXCEPTO LO QUE ESTE DESPUES DE UN =
             if "=" not in words[i]:
                 words[i] = words[i].lower()

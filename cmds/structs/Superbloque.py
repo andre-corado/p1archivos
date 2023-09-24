@@ -68,6 +68,7 @@ class Superbloque:
     def getN(self):
         return self.s_inodes_count + self.s_free_inodes_count
 
+
 class Inode:
     #  <<<<<---- SIZE = 128 ---->>>>>
     # i_uid-2 | i_gid-2 | i_size-3 | i_atime-19 | i_ctime-19 | i_mtime-19 | i_block-60 | i_type-1 | i_perm-3
