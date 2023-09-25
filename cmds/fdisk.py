@@ -58,7 +58,6 @@ def execute(consoleLine):
                     return 'Error: Add no puede ser 0.'
                 if not sizeFound and not deleteFound:
                     addFound = True
-        
         if sizeFound:
             # Se crea una partición
             if unit == 'K':
@@ -74,7 +73,13 @@ def execute(consoleLine):
             return newPartition(size, path, name, type, fit)
         elif addFound:
             # Se modifica el tamaño de una partición
-            pass
+            if unit == 'K':
+                add *= 1024
+            elif unit == 'M':
+                add *= 1024 * 1024
+            elif unit == 'B':
+                add *= 1
+            return editPartition(path, name, add)
         elif deleteFound:
             # Se elimina una partición
             return deletePartition(path, name)
@@ -149,6 +154,26 @@ def deletePartition(path, name):
     # Eliminar partición
     mbr.deletePartition(path, name)
     return 'Partición eliminada exitosamente.'
+
+def editPartition(path, name, size):
+    try:
+        if not os.path.exists(path):
+            return 'Error: Disco no encontrado.'
+        with open(path, 'r+b') as file:
+            mbr = MBR()
+            mbr.decode(file.read(136))
+            file.close()
+    except:
+        return 'Error: Disco no encontrado.'
+
+    # Buscar partición
+    part, type = mbr.getPartitionNamed(name, path)
+    if type is None:
+        return 'Error: No existe una partición con ese nombre.'
+
+    # Editar partición
+    return mbr.editPrimaryPartition(path, name, size)
+
 
 def convertNameToID(name, path):
     id = "54"

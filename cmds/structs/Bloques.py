@@ -13,6 +13,8 @@ class Content: # 16 bytes
         self.b_name = bytes[:12].decode().replace('\x00', '')
         self.b_inodo = int.from_bytes(bytes[12:16], byteorder='big', signed=False)
 
+    def setName(self, name):
+        self.b_name = formatStr(name, 12)
 
 class DirBlock: # 64 bytes
     def __init__(self):

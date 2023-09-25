@@ -1,5 +1,7 @@
 from datetime import datetime
 
+from cmds.structs.Bloques import DirBlock
+
 
 class Superbloque:
 
@@ -8,22 +10,22 @@ class Superbloque:
     # <<<< ----- bytes = 89 ----- >>>>
     def __init__(self):
         self.s_filesystem_type = 0  # int1 0 = 2FS, 1 = 3FS
-        self.s_inodes_count = 0 # int4
-        self.s_blocks_count = 0 # int4
-        self.s_free_blocks_count = 0 # int4
-        self.s_free_inodes_count = 0 # int4
-        self.s_mtime = "00/00/0000 00:00:00" # char19
-        self.s_umtime = "00/00/0000 00:00:00" # char19
-        self.s_mnt_count = 0 # int2
-        self.s_magic = 61267 # 0xEF53 int2
-        self.s_inode_s = 0 #int3
-        self.s_block_s = 0 #int3
-        self.s_first_ino = 0 #int4
-        self.s_first_blo = 0 #int4
-        self.s_bm_inode_start = 0 #int4
-        self.s_bm_block_start = 0 #int4
-        self.s_inode_start = 0 #int4
-        self.s_block_start = 0 #int4
+        self.s_inodes_count = 0  # int4
+        self.s_blocks_count = 0  # int4
+        self.s_free_blocks_count = 0  # int4
+        self.s_free_inodes_count = 0  # int4
+        self.s_mtime = "00/00/0000 00:00:00"  # char19
+        self.s_umtime = "00/00/0000 00:00:00"  # char19
+        self.s_mnt_count = 0  # int2
+        self.s_magic = 61267  # 0xEF53 int2
+        self.s_inode_s = 0  # int3
+        self.s_block_s = 0  # int3
+        self.s_first_ino = 0  # int4
+        self.s_first_blo = 0  # int4
+        self.s_bm_inode_start = 0  # int4
+        self.s_bm_block_start = 0  # int4
+        self.s_inode_start = 0  # int4
+        self.s_block_start = 0  # int4
 
     def encode(self):
         bytes = bytearray()
@@ -65,22 +67,77 @@ class Superbloque:
         self.s_inode_start = int.from_bytes(bytes[81:85], byteorder='big', signed=False)
         self.s_block_start = int.from_bytes(bytes[85:89], byteorder='big', signed=False)
 
+    def update(self, path, index):
+        with open(path, 'rb+') as file:
+            file.seek(index)
+            file.write(self.encode())
+            file.close()
+
     def getN(self):
         return self.s_inodes_count + self.s_free_inodes_count
 
+    #  ------------ INODE ------------
+    def getNLastInode(self):
+        return self.s_inodes_count - self.s_free_inodes_count
+
+    def getLastInodeIndex(self):
+        return self.getNLastInode() * 128 + self.s_inode_start
+
+    def addRoot(self, path, superblockIndex):
+        inode = Inode('0') # '0' = Carpeta
+        dirBlock = DirBlock()
+        dirBlock.b_Content[0].setName('root')
+        dirBlock.b_Content[1].setName('padre')
+        dirBlock.b_Content[1].b_inodo = -1  # No tiene padre
+        inode.i_block[inode.getPointerIndex()] = self.getLastBlockIndex()
+        self.writeInode(inode, path)
+        self.writeBlock(dirBlock, path)
+        self.update(path, superblockIndex)
+
+
+    def writeInode(self, inode, path):
+       try:
+            with open(path, 'rb+') as file:
+                file.seek(self.getLastInodeIndex())
+                file.write(inode.encode())
+                file.seek(self.s_bm_inode_start + self.getNLastInode())
+                file.write('1'.encode())
+                self.s_free_inodes_count -= 1
+                file.close()
+       except Exception as e:
+           return 'Error: No se pudo escribir el Inodo.'
+
+    # ---------- BLOCKS ------------
+    def getNLastBlock(self):
+        return self.s_blocks_count - self.s_free_blocks_count
+
+    def getLastBlockIndex(self):
+        return self.getNLastBlock() * 64 + self.s_block_start
+
+    def writeBlock(self, block, path):
+        try:
+            with open(path, 'rb+') as file:
+                file.seek(self.s_bm_block_start + self.getNLastBlock())
+                file.write('1'.encode())
+                file.seek(self.getLastBlockIndex())
+                file.write(block.encode())
+                self.s_free_blocks_count -= 1
+                file.close()
+        except Exception as e:
+            return 'Error: No se pudo escribir el Bloque.'
 
 class Inode:
     #  <<<<<---- SIZE = 128 ---->>>>>
     # i_uid-2 | i_gid-2 | i_size-3 | i_atime-19 | i_ctime-19 | i_mtime-19 | i_block-60 | i_type-1 | i_perm-3
-    def __init__(self):
-        self.i_uid = 0 # int2
-        self.i_gid = 0 # int2
-        self.i_s = 0 # int3
-        self.i_atime = "00/00/0000 00:00:00" # char19
-        self.i_ctime = getTime() # char19
-        self.i_mtime = "00/00/0000 00:00:00" # char19
+    def __init__(self, type):
+        self.i_uid = 0  # int2
+        self.i_gid = 0  # int2
+        self.i_s = 0  # int3
+        self.i_atime = "00/00/0000 00:00:00"  # char19
+        self.i_ctime = getTime()  # char19
+        self.i_mtime = getTime()  # char19
         self.i_block = [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1]  # int4[15]
-        self.i_type = '0'  # char '0' = Carpeta, '1' = Archivo
+        self.i_type = type  # char '0' = Carpeta, '1' = Archivo
         self.i_perm = 0  # int3
 
     def encode(self):
@@ -109,6 +166,10 @@ class Inode:
         self.i_type = bytes[124:125].decode().replace('\x00', '')
         self.i_perm = int.from_bytes(bytes[125:128], byteorder='big', signed=False)
 
+    def getPointerIndex(self):
+        for i in self.i_block:
+            if i == -1:
+                return i
 
 def getTime():
     return datetime.now().strftime("%d/%m/%Y %H:%M:%S").rstrip()

@@ -315,6 +315,19 @@ class MBR:  # Size = 136 bytes
                 file.close()
         except:
             return 'Error: No se pudo borrar la partición.'
+
+
+    def editPrimaryPartition(self, path, name, size):
+        part, type = self.getPartitionNamed(name, path)
+        if type == 'P':
+            if self.partitionSizeIsCorrect(self.getPartitions().index(part), size + part.part_s):
+                part.part_s += size
+                self.setPartition(self.getPartitions().index(part), part)
+                self.updateDisk(path)
+                return 'Partición editada exitosamente.'
+            else:
+                return 'Error: No hay espacio suficiente para editar la partición.'
+        return 'Partición modificada exitosamente.'
     # ======================= Graphviz =========================
     def getGraph(self, extension='png', path=''):
         # Encabezado MBR

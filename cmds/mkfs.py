@@ -78,6 +78,8 @@ def format2FS(id):
                 file.seek(partition.part_start)
             elif mountedPart.type == 'L':
                 file.seek(partition.part_start + EBR)
+            else:
+                return 'Error: Tipo de partición no válido.'
             file.write(superblock.encode())
             # Crear Bitmap de Inodos
             file.seek(superblock.s_bm_inode_start)
@@ -87,7 +89,7 @@ def format2FS(id):
             file.write("0".encode() * (3 * n))
             # Crear Inodos
             from cmds.structs.Superbloque import Inode
-            inode = Inode()
+            inode = Inode('N')
             for i in range(n):
                 file.seek(superblock.s_inode_start + i * INODE)
                 file.write(inode.encode())
@@ -96,11 +98,13 @@ def format2FS(id):
         print(e)
         return 'Error: No se pudo escribir el Superbloque.'
 
-
-
-
-
-
-
+    # Crear directorio raíz
+    indexsb = 0
+    if mountedPart.type == 'P':
+        indexsb = partition.part_start
+    elif mountedPart.type == 'L':
+        indexsb = partition.part_start + EBR
+    superblock.addRoot(mountedPart.path, indexsb)
+    print("Se creó el directorio raíz.")
 
     return 'Se formateó la partición:  ' + id + ' correctamente.'

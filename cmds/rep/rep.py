@@ -5,6 +5,8 @@ from cmds.structs.MBR import MBR
 from cmds.mount import getMountedPartition, isMounted
 from cmds.rep.bitmaps import makebm_block, makebm_inode
 from cmds.structs.MBR import getSuperblockByMountedPartition
+from cmds.structs.Superbloque import Inode
+from cmds.structs.Bloques import DirBlock
 
 
 def execute(consoleLine):
@@ -72,7 +74,7 @@ def makeMBRTable(tablePath, diskPath):
     mbr = getMBRFromDisk(diskPath)
     if isinstance(mbr, str):
         return mbr
-    if not tablePath.endswith(".pdf") and not tablePath.endswith(".png") and not tablePath.endswith(".jpg"):
+    if tablePath.endswith(".pdf") or tablePath.endswith(".png") or tablePath.endswith(".jpg"):
         if not tablePath.endswith("\""):
             ext = tablePath[-3:]
             tablePath = tablePath[:-4]
@@ -267,6 +269,9 @@ def makeSBTable(path, p):
     # Borrar archivos temporales
     os.remove(path)
     return 'Tabla SB creada exitosamente.'
+
+def makeTreeGraph(path, p):
+    pass
 
 def getMBRFromDisk(diskPath):
     if not os.path.exists(diskPath):
